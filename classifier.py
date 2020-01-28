@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+ #!/usr/bin/env python3.7
 
 # "hello_world" classifier
 # source: https://www.youtube.com/watch?v=cKxRvEZd3Mw
@@ -12,7 +12,7 @@ import re
 
 
 datadir = "./apple_orange_images/"
-data_type="fruits"
+data_type = "fruits"
 
 # features = data set characteristics
 # labels = type of data
@@ -75,6 +75,36 @@ def num_to_label(num):
 def info_data(features,labels):
     print("imported features: len{}, type: {}, with labels len={}, type={}".format(len(features), type(features), len(labels), type(labels)))
     print(labels)
+
+    size_x=0
+    size_y=0
+    size_z=0
+    for i in features:
+        print("example: type={}, dimension={}, size={}".format(type(i),np.shape(i), np.size(i)))
+        s = np.shape(i)
+        print(s,type(s))
+        if s[0] > size_x:
+            size_x = s[0]
+        if s[1] > size_y:
+            size_y = s[1]
+        if s[2] > size_z:
+            size_z = s[2]
+    print("highest dimension is: {},{},{}".format(size_y,size_x,size_z))
+
+    resized_features = []
+    for i in features:
+        resized_i = cv2.resize(i,(size_x,size_y))
+        resized_features.append(resized_i)
+
+    num_img=0
+    for filename in os.listdir(datadir):
+        cv2.imwrite(datadir+'resized_'+filename, resized_features[num_img])
+        num_img+=1
+
+    for i in resized_features:
+        print(type(i),np.size(i),np.shape(i))
+
+    exit(0)
     
 
 
@@ -99,9 +129,8 @@ def image_classifier(file):
 
     for img in os.listdir(datadir):
         np_array = cv2.imread(datadir + img)
-        flat_array = np.concatenate(np_array).ravel()
-        features.append(flat_array)
-        #labels.append(search_label_in_filename(img,"orange_apple"))
+        #flat_array = np.concatenate(np_array).ravel()
+        features.append(np_array)
         labels.append(search_label_in_filename(img))
 
     info_data(features, labels)
