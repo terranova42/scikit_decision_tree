@@ -17,8 +17,6 @@ data_type = "fruits"
 
 # features = data set characteristics
 # labels = type of data
-height = 0
-width = 0
 
 def test():
     features = [[140, 1], [130, 1], [150, 0], [170, 0]]
@@ -83,8 +81,8 @@ def info_data(features,labels):
 def resize_images_to_highest_dim(img_array):
     #takes in input an array of images and resized all images to the highest dimension
 
-    global height
-    global width
+    height=0
+    width=0
 
     for img in img_array:
         shape = np.shape(img)
@@ -95,7 +93,7 @@ def resize_images_to_highest_dim(img_array):
 
     resized_array = []
     for img in img_array:
-        resized_img = cv2.resize(img,(height,width))
+        resized_img = cv2.resize(img,(width,height))
         resized_array.append(resized_img)
 
     num_img = 0
@@ -161,7 +159,7 @@ def image_classifier(file):
     target_width = target_shape[1]
 
     # resize input image
-    resized_input = cv2.resize(file_numpy,(target_height,target_width))
+    resized_input = cv2.resize(file_numpy,(target_width,target_height))
     #flatten to 1d array
     flat_input = np.concatenate(resized_input).ravel()
 
