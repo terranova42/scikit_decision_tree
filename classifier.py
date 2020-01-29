@@ -1,4 +1,5 @@
- #!/usr/bin/env python3.7
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # "hello_world" classifier
 # source: https://www.youtube.com/watch?v=cKxRvEZd3Mw
@@ -16,6 +17,8 @@ data_type = "fruits"
 
 # features = data set characteristics
 # labels = type of data
+height = 0
+width = 0
 
 def test():
     features = [[140, 1], [130, 1], [150, 0], [170, 0]]
@@ -76,36 +79,41 @@ def info_data(features,labels):
     print("imported features: len{}, type: {}, with labels len={}, type={}".format(len(features), type(features), len(labels), type(labels)))
     print(labels)
 
-    size_x=0
-    size_y=0
-    size_z=0
-    for i in features:
-        print("example: type={}, dimension={}, size={}".format(type(i),np.shape(i), np.size(i)))
-        s = np.shape(i)
-        print(s,type(s))
-        if s[0] > size_x:
-            size_x = s[0]
-        if s[1] > size_y:
-            size_y = s[1]
-        if s[2] > size_z:
-            size_z = s[2]
-    print("highest dimension is: {},{},{}".format(size_y,size_x,size_z))
-
-    resized_features = []
-    for i in features:
-        resized_i = cv2.resize(i,(size_x,size_y))
-        resized_features.append(resized_i)
-
-    num_img=0
-    for filename in os.listdir(datadir):
-        cv2.imwrite(datadir+'resized_'+filename, resized_features[num_img])
-        num_img+=1
-
-    for i in resized_features:
-        print(type(i),np.size(i),np.shape(i))
-
-    exit(0)
     
+def resize_images_to_highest_dim(img_array):
+    #takes in input an array of images and resized all images to the highest dimension
+
+    global height
+    global width
+
+    for img in img_array:
+        shape = np.shape(img)
+        if height < shape[0]:
+            height = shape[0]
+        if width < shape[1]:
+            width = shape[1]
+
+    resized_array = []
+    for img in img_array:
+        resized_img = cv2.resize(img,(height,width))
+        resized_array.append(resized_img)
+
+    num_img = 0
+    for filename in os.listdir(datadir):
+        cv2.imwrite(datadir+'resized_'+filename, resized_array[num_img])
+        num_img += 1
+
+    return resized_array
+
+def flatten_array(img_array):
+
+    flat_img_array = []
+
+    for img in img_array:
+        flat_img = np.concatenate(img).ravel()
+        flat_img_array.append(flat_img)
+
+    return flat_img_array
 
 
 def image_classifier(file):
@@ -133,35 +141,35 @@ def image_classifier(file):
         features.append(np_array)
         labels.append(search_label_in_filename(img))
 
-    info_data(features, labels)
+    #info_data(features, labels)
 
     #  choose algo for classification
     clf = tree.DecisionTreeClassifier()
 
-    # normalize features lenght (1D array)
-    # all numpy arrays of features should have the same lenght
-    size = 0
-    for i in features:
-        if len(i) > size:
-            size = len(i)
-
     # resize all features to the highest lenght
-    normalized_features = []
-    for i in features:
-        a = np.resize(i,size)
-        normalized_features.append(a)
+    resized_features = resize_images_to_highest_dim(features)
+    flat_features = flatten_array(resized_features)
 
     #  train
-    clf = clf.fit(normalized_features, labels)
+    clf = clf.fit(flat_features, labels)
 
     #  predict
     file_numpy = cv2.imread(file)
-    flat_array = np.concatenate(file_numpy).ravel()
-    normalized_array = np.resize(flat_array,size)
-    two_d_normalized_array = np.reshape(normalized_array, (1,-1))
-    result = clf.predict(two_d_normalized_array)
+
+    target_shape = resized_features[0].shape
+    target_height = target_shape[0]
+    target_width = target_shape[1]
+
+    # resize input image
+    resized_input = cv2.resize(file_numpy,(target_height,target_width))
+    #flatten to 1d array
+    flat_input = np.concatenate(resized_input).ravel()
+
+    normalized_array = np.reshape(flat_input, (1,-1))
+    result = clf.predict(normalized_array)
+    proba = clf.predict_proba(normalized_array)
     #print(num_to_label(result,"orange_apple"))
-    print(num_to_label(result))
+    print("image is recognized as: {} with a probabilty of: {}".format(num_to_label(result),proba))
 
 def usage():
     print("usage: {} data_type filename_to_predict\n first argument data_type = 'fruit' or 'cars', second argument is the image to be guessed.".format(sys.argv[0]))
