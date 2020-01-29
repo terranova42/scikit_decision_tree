@@ -96,10 +96,12 @@ def resize_images_to_highest_dim(img_array):
         resized_img = cv2.resize(img,(width,height))
         resized_array.append(resized_img)
 
+    '''
     num_img = 0
     for filename in os.listdir(datadir):
         cv2.imwrite(datadir+'resized_'+filename, resized_array[num_img])
         num_img += 1
+    '''
 
     return resized_array
 
