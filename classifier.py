@@ -10,23 +10,26 @@ import os
 import sys
 import cv2
 import re
+import pickle
 
 
-datadir = "./apple_orange_images/"
+data_dir = "./fruits_train/"
+test_dir = "./fruits_test/"
 data_type = "fruits"
+algo_type = "DecisionTreeClassifier"
 
-# features = data set characteristics
-# labels = type of data
+#features = data set characteristics
+#labels = type of data
 
 def test():
     features = [[140, 1], [130, 1], [150, 0], [170, 0]]
     labels = [1, 1, 0, 0]
 
-    # choose algo for classification
+    #choose algo for classification
     clf = tree.DecisionTreeClassifier()
-    # train
+    #train
     clf = clf.fit(features, labels)
-    # predict
+    #predict
     print(clf.predict([[160, 0]]))
 
 def search_label_in_filename(str):
@@ -98,8 +101,8 @@ def resize_images_to_highest_dim(img_array):
 
     '''
     num_img = 0
-    for filename in os.listdir(datadir):
-        cv2.imwrite(datadir+'resized_'+filename, resized_array[num_img])
+    for filename in os.listdir(data_dir):
+        cv2.imwrite(data_dir+'resized_'+filename, resized_array[num_img])
         num_img += 1
     '''
 
@@ -115,6 +118,37 @@ def flatten_array(img_array):
 
     return flat_img_array
 
+def save_model(modname):
+    s = pickle.dumps(modname)
+    filename = algo_type + data_type + "trained_model.pickle"
+    with open(filename, 'wb') as f:
+        f.write(s)
+        f.close()
+
+def check_model_on_disk():
+    filename = algo_type + data_type + "trained_model.pickle"
+    if os.access(filename, os.R_OK):
+        with open(filename, 'rb') as f:
+            s = f.read()
+            model = pickle.loads(s)
+            return model
+    else:
+        return None
+
+def test_directory(target_height, target_width, model):
+    for file in os.listdir(test_dir):
+        file_numpy = cv2.imread(test_dir + file)
+
+        # resize input image
+        resized_input = cv2.resize(file_numpy, (target_width, target_height))
+        # flatten to 1d array
+        flat_input = np.concatenate(resized_input).ravel()
+
+        normalized_array = np.reshape(flat_input, (1, -1))
+        result = model.predict(normalized_array)
+        proba = model.predict_proba(normalized_array)
+        # print(num_to_label(result,"orange_apple"))
+        print("image {} is recognized as: {} with a probability of: {}".format(file, num_to_label(result), proba))
 
 def image_classifier(file):
 
@@ -135,58 +169,74 @@ def image_classifier(file):
     features = []
     labels = []
 
-    for img in os.listdir(datadir):
-        np_array = cv2.imread(datadir + img)
+    for img in os.listdir(data_dir):
+        np_array = cv2.imread(data_dir + img)
         #flat_array = np.concatenate(np_array).ravel()
         features.append(np_array)
         labels.append(search_label_in_filename(img))
 
     #info_data(features, labels)
 
-    #  choose algo for classification
-    clf = tree.DecisionTreeClassifier()
+    # choose algo for classification
+    model = tree.DecisionTreeClassifier()
 
-    # resize all features to the highest lenght
+    #resize all features to the highest lenght
     resized_features = resize_images_to_highest_dim(features)
     flat_features = flatten_array(resized_features)
 
-    #  train
-    clf = clf.fit(flat_features, labels)
-
-    #  predict
-    file_numpy = cv2.imread(file)
+    # check trained model on disk, else train a new one.
+    saved = check_model_on_disk()
+    if saved is not None:
+        model = saved
+        print("loaded saved model...")
+    else:
+        # train
+        print("training new model...")
+        model = model.fit(flat_features, labels)
+        # save model on disk with pickle
+        save_model(model)
+        print("saved model on disk...")
 
     target_shape = resized_features[0].shape
     target_height = target_shape[0]
     target_width = target_shape[1]
 
-    # resize input image
-    resized_input = cv2.resize(file_numpy,(target_width,target_height))
-    #flatten to 1d array
-    flat_input = np.concatenate(resized_input).ravel()
+    # if special keyword "TEST", predict all test directory
+    if file == "TEST":
+        test_directory(target_height, target_width, model)
+    else:
+        # predict
+        file_numpy = cv2.imread(file)
 
-    normalized_array = np.reshape(flat_input, (1,-1))
-    result = clf.predict(normalized_array)
-    proba = clf.predict_proba(normalized_array)
-    #print(num_to_label(result,"orange_apple"))
-    print("image is recognized as: {} with a probabilty of: {}".format(num_to_label(result),proba))
+        #resize input image
+        resized_input = cv2.resize(file_numpy,(target_width,target_height))
+        #flatten to 1d array
+        flat_input = np.concatenate(resized_input).ravel()
+        normalized_array = np.reshape(flat_input, (1,-1))
+        result = model.predict(normalized_array)
+        proba = model.predict_proba(normalized_array)
+        #print(num_to_label(result,"orange_apple"))
+        print("image {} is recognized as: {} with a probability of: {}".format(file,num_to_label(result),proba))
 
 def usage():
-    print("usage: {} data_type filename_to_predict\n first argument data_type = 'fruit' or 'cars', second argument is the image to be guessed.".format(sys.argv[0]))
+    print("usage: {} data_type filename_to_predict\n first argument data_type = 'fruits' or 'cars', second argument is the image to be guessed.".format(sys.argv[0]))
     exit(1)
 
 def main():
     global data_type
-    global datadir
+    global data_dir
+    global test_dir
     if len(sys.argv) != 3:
         usage()
     else:
-        if sys.argv[1] == "fruit":
+        if sys.argv[1] == "fruits":
             data_type="orange_apple"
-            datadir="./apple_orange_images/"
-        elif sys.argv[1] == "car":
+            data_dir="./fruits_train/"
+            test_dir="./fruits_test/"
+        elif sys.argv[1] == "cars":
             data_type="porsche_mercedes"
-            datadir="./porsche_mercedes/"
+            data_dir="./cars_train/"
+            test_dir="./cars_test/"
         else:
             usage()
 
