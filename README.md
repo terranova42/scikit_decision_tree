@@ -8,3 +8,6 @@ added functions save_model -> pickle
 and: test_directory -> test images.
 Todo: update model.
 
+V.1.3, 11/06/2022:
+updated with algo: SGD.
+Todo: SVM.
